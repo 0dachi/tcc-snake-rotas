@@ -1,0 +1,84 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+
+<head>
+  <meta charset="UTF-8">
+  <title>Mapa com TomTom</title>
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <!-- SDK do TomTom -->
+  <script src="https://api.tomtom.com/maps-sdk-for-web/cdn/6.x/6.20.0/maps/maps-web.min.js"></script>
+  <script src="https://api.tomtom.com/maps-sdk-for-web/cdn/6.x/6.20.0/services/services-web.min.js"></script>
+  <link rel="stylesheet" href="https://api.tomtom.com/maps-sdk-for-web/cdn/6.x/6.20.0/maps/maps.css">
+  <link rel="stylesheet" href="css_do_css.css" />
+</head>
+
+<body>
+  <button id="btnRota">Traçar Rota</button>
+  <div id="map"></div>
+
+  <script>
+    // testando api do proprio chrome para pegar a localização atual do usuario
+    navigator.geolocation.getCurrentPosition(
+      (pos) => {
+        console.log("Latitude:", pos.coords.latitude);
+        console.log("Longitude:", pos.coords.longitude);
+      },
+      (err) => {
+        console.error("Erro ao pegar localização", err);
+      }
+    );
+    const API_KEY = "cwodq1B0ax9m9HtDV2iM2yj50Eugb05p";
+    const pontos = [];
+    let map = tt.map({
+      key: API_KEY,
+      container: "map",
+      center: [-46.6333, -23.5505], // São Paulo
+      zoom: 12
+    });
+
+    map.addControl(new tt.FullscreenControl());
+    map.addControl(new tt.NavigationControl());
+
+    // Ao clicar no mapa, adicionar marcador
+    map.on("click", (e) => {
+      const coord = e.lngLat;
+      pontos.push([coord.lng, coord.lat]);
+
+      new tt.Marker().setLngLat(coord).addTo(map);
+    });
+
+    // Botão para gerar rota
+    document.getElementById("btnRota").addEventListener("click", () => {
+      if (pontos.length < 2) {
+        alert("Selecione pelo menos 2 pontos no mapa!");
+        return;
+      }
+
+      tt.services.calculateRoute({
+        key: API_KEY,
+        locations: pontos.map(p => p.join(",")).join(":")
+      })
+        .then(routeData => {
+          let geojson = routeData.toGeoJson();
+          if (map.getSource("route")) {
+            map.removeLayer("route");
+            map.removeSource("route");
+          }
+          map.addLayer({
+            id: "route",
+            type: "line",
+            source: {
+              type: "geojson",
+              data: geojson
+            },
+            paint: {
+              "line-color": "#e8451c",
+              "line-width": 5
+            }
+          });
+        });
+    });
+  </script>
+</body>
+
+</html>
